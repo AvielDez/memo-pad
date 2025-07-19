@@ -25,36 +25,36 @@ create table app_user (
 
 create table user_profile (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE REFERENCES app_user(id) ON DELETE CASCADE,
     full_name TEXT NOT NULL,
     setting_theme theme NOT NULL DEFAULT 'LIGHT',
     setting_font_type font_type NOT NULL DEFAULT 'SANS_SERIF',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    user_id UUID UNIQUE REFERENCES app_user(id) ON DELETE CASCADE
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 create table note (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES app_user(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     is_archived BOOLEAN NOT NULL DEFAULT false,
-    user_id UUID REFERENCES app_user(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 create table tag (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES app_user(id) ON DELETE CASCADE,
     name TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    user_id UUID REFERENCES app_user(id) ON DELETE CASCADE
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 create table note_tag (
+    user_id UUID REFERENCES app_user(id) ON DELETE CASCADE,
     note_id UUID REFERENCES note(id) ON DELETE CASCADE,
     tag_id UUID REFERENCES tag(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES app_user(id) ON DELETE CASCADE,
     PRIMARY KEY (note_id, tag_id, user_id)
 );
 
@@ -86,22 +86,22 @@ ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users can view their own profile"
   ON public.app_user
   FOR SELECT
-  USING (auth.uid() = id);
+  USING ((SELECT auth.uid()) = id);
 
 CREATE POLICY "users can update their own profile"
   ON public.app_user
   FOR UPDATE
-  USING (auth.uid() = id);
+  USING ((SELECT auth.uid()) = id);
 
 CREATE POLICY "users can insert their own profile"
   ON public.app_user
   FOR INSERT
-  WITH CHECK (auth.uid() = id);
+  WITH CHECK ((SELECT auth.uid()) = id);
 
 CREATE POLICY "users can delete their own profile"
   ON public.app_user
   FOR DELETE
-  USING (auth.uid() = id);
+  USING ((SELECT auth.uid()) = id);
 
 -- UserProfile Table RLS and Policies
 ALTER TABLE public.user_profile
@@ -110,22 +110,22 @@ ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users can view their own profile"
   ON public.user_profile
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can update their own profile"
   ON public.user_profile
   FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can insert their own profile"
   ON public.user_profile
   FOR INSERT
-  WITH CHECK (auth.uid() = user_id);    
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can delete their own profile"
   ON public.user_profile
   FOR DELETE
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 -- Note Table RLS and Policies
 ALTER TABLE public.note
@@ -134,22 +134,22 @@ ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users can view their own notes"
   ON public.note
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can update their own notes"
   ON public.note
   FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can insert their own notes"
   ON public.note
   FOR INSERT
-  WITH CHECK (auth.uid() = user_id);    
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can delete their own notes"
   ON public.note
   FOR DELETE
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 -- Tag Table RLS and Policies
 ALTER TABLE public.tag
@@ -158,22 +158,22 @@ ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users can view their own tags"
   ON public.tag
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can update their own tags"
   ON public.tag
   FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can insert their own tags"
   ON public.tag
   FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can delete their own tags"
   ON public.tag
   FOR DELETE
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 -- NoteTag Table RLS and Policies
 ALTER TABLE public.note_tag
@@ -182,30 +182,30 @@ ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users can view their own note-tag associations"
   ON public.note_tag
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can update their own note-tag associations"
   ON public.note_tag
   FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "users can insert only their own note-tag associations"
   ON public.note_tag
   FOR INSERT
   WITH CHECK (
-    auth.uid() = user_id
+    (SELECT auth.uid()) = user_id
     AND EXISTS (
-      SELECT 1 FROM note WHERE id = note_id AND user_id = auth.uid()
+      SELECT 1 FROM note WHERE id = note_id AND user_id = (SELECT auth.uid())
     )
     AND EXISTS (
-      SELECT 1 FROM tag WHERE id = tag_id AND user_id = auth.uid()
+      SELECT 1 FROM tag WHERE id = tag_id AND user_id = (SELECT auth.uid())
     )
   );
 
 CREATE POLICY "users can delete their own note-tag associations"
   ON public.note_tag
   FOR DELETE
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) = user_id);
 
 
 -- Indexes for performance
