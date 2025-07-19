@@ -22,7 +22,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const session = await getSession(request)
   session.set('access_token', data.session.access_token)
 
-  return redirect('/dashboard', {
+  return redirect('/notes', {
     headers: {
       'Set-Cookie': await sessionStorage.commitSession(session),
     },
@@ -31,7 +31,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const session = await getSession(request)
-  if (session.has('access_token')) return redirect('/dashboard')
+  if (session.has('access_token')) return redirect('/notes')
   return json({})
 }
 
@@ -41,10 +41,6 @@ export default function LoginPage() {
   return (
     <div style={{ maxWidth: 400, margin: 'auto' }}>
       <h1>Login</h1>
-      {actionData?.error && (
-        <p style={{ color: 'red' }}>{actionData.error}</p>
-      )}
-
       <Form method="post">
         <div>
           <label>Email</label>
@@ -58,6 +54,9 @@ export default function LoginPage() {
 
         <button type="submit">Sign In</button>
       </Form>
+      {actionData?.error && (
+        <p style={{ color: 'red' }}>{actionData.error}</p>
+      )}
     </div>
   )
 }
